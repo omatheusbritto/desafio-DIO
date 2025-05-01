@@ -1,0 +1,179 @@
+from datetime import datetime
+import os
+
+class Historico:
+    def __init__(self):
+        self.transacoes = []
+
+    def adicionar_transacao(self, tipo, valor):
+        data_hora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        self.transacoes.append(f"{tipo}: R${valor:.2f} - {data_hora}")
+
+    def mostrar_extrato(self):
+        if not self.transacoes:
+            print("Nenhuma transação realizada.")
+        else:
+            for transacao in self.transacoes:
+                print(transacao)
+
+class Conta:
+    def __init__(self, numero, agencia):
+        self.saldo = 0.0
+        self.numero = numero
+        self.agencia = agencia
+        self.historico = Historico()
+        self.transacoes_diarias = 0
+        self.valor_sacado_diario = 0.0
+
+    def sacar(self, valor):
+        if self.transacoes_diarias >= 10:
+            print("Erro! Número de transações diárias atingido.")
+            return False
+        if valor > 500:
+            print("Erro! Valor não permitido por saque.")
+            return False
+        if self.valor_sacado_diario + valor > 1500:
+            print("Erro! Valor de saque diário atingido.")
+            return False
+        if valor <= 0:
+            print("Erro! Valor não permitido.")
+            return False
+        if valor > self.saldo:
+            print("Erro! Saldo insuficiente.")
+            return False
+
+        self.saldo -= valor
+        self.transacoes_diarias += 1
+        self.valor_sacado_diario += valor
+        self.historico.adicionar_transacao("Saque", valor)
+        print(f"Saque realizado! Saldo atual: R${self.saldo:.2f} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+        return True
+
+    def depositar(self, valor):
+        if self.transacoes_diarias >= 10:
+            print("Erro! Transação diária atingida.")
+            return False
+        if valor <= 0:
+            print("Erro! Valor não permitido.")
+            return False
+
+        self.saldo += valor
+        self.transacoes_diarias += 1
+        self.historico.adicionar_transacao("Depósito", valor)
+        print(f"Depósito realizado! Saldo atual: R${self.saldo:.2f} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+        return True
+
+    def ver_saldo(self):
+        print(f"Saldo atual: R${self.saldo:.2f} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+
+class Cliente:
+    def __init__(self, cpf, nome, email, telefone, endereco):
+        self.cpf = cpf
+        self.nome = nome
+        self.email = email
+        self.telefone = telefone
+        self.endereco = endereco
+        self.contas = []
+
+    def adicionar_conta(self, numero, agencia):
+        conta = Conta(numero, agencia)
+        self.contas.append(conta)
+        print(f"Conta criada com sucesso! Agência: {agencia}, Nº Conta: {numero}")
+
+usuarios = {}
+
+def cadastrar_usuario():
+    cpf = input("Digite o CPF do usuário: ")
+    if cpf in usuarios:
+        print("Usuário já cadastrado! Deseja atualizar? (s/n)")
+        opcao = input()
+        if opcao.lower() != 's':
+            return
+
+    nome = input("Nome completo: ")
+    email = input("Email: ")
+    telefone = input("Telefone: ")
+    endereco = input("Endereço: ")
+
+    usuarios[cpf] = Cliente(cpf, nome, email, telefone, endereco)
+    print("Usuário cadastrado com sucesso!")
+
+def criar_conta():
+    cpf = input("Digite o CPF do titular: ")
+    if cpf not in usuarios:
+        print("Usuário não encontrado! Cadastre o usuário primeiro.")
+        return
+    
+    agencia = input("Digite a agência: ")
+    numero_conta = input("Digite o número da conta: ")
+
+    usuarios[cpf].adicionar_conta(numero_conta, agencia)
+
+def listar_usuarios():
+    cpf = input("Digite o CPF para listar os dados: ")
+    if cpf in usuarios:
+        usuario = usuarios[cpf]
+        print(f"Nome: {usuario.nome}\nEmail: {usuario.email}\nTelefone: {usuario.telefone}\nEndereço: {usuario.endereco}")
+        if usuario.contas:
+            for conta in usuario.contas:
+                print(f"Conta - Agência: {conta.agencia}, Nº: {conta.numero}, Saldo: R${conta.saldo:.2f}")
+    else:
+        print("Usuário não encontrado!")
+
+def menu_principal():
+    while True:
+        print("""
+| ============== MENU PRINCIPAL =========== |
+| PARA FUNÇÕES BANCÁRIAS -------------- [1] |
+| PARA CADASTRAR USUÁRIOS ------------- [2] |
+| PARA CRIAR CONTA -------------------- [3] |
+| PARA LISTAR USUÁRIOS ---------------- [4] |
+| PARA SAIR --------------------------- [0] |
+| ========================================= |
+        """)
+        opcao = input("Escolha uma opção: ")
+        if opcao == "1":
+            menu_bancario()
+        elif opcao == "2":
+            cadastrar_usuario()
+        elif opcao == "3":
+            criar_conta()
+        elif opcao == "4":
+            listar_usuarios()
+        elif opcao == "0":
+            break
+        else:
+            print("Opção inválida!")
+
+def menu_bancario():
+    cpf = input("Digite seu CPF: ")
+    if cpf in usuarios and usuarios[cpf].contas:
+        conta = usuarios[cpf].contas[0]
+        while True:
+            print("""
+| ============ FUNÇÕES BANCÁRIAS ========== |
+| Para SACAR -------------------------- [1] |
+| Para DEPOSITAR ---------------------- [2] |
+| Para SALDO -------------------------- [3] |
+| Para EXTRATO ------------------------ [4] |
+| Para VOLTAR AO MENU PRINCIPAL ------- [5] |
+            """)
+            opcao = input("Escolha uma opção: ")
+            if opcao == "1":
+                valor = float(input("Valor a sacar R$: "))
+                conta.sacar(valor)
+            elif opcao == "2":
+                valor = float(input("Valor a depositar R$: "))
+                conta.depositar(valor)
+            elif opcao == "3":
+                conta.ver_saldo()
+            elif opcao == "4":
+                conta.historico.mostrar_extrato()
+            elif opcao == "5":
+                break
+            else:
+                print("Opção inválida!")
+    else:
+        print("Usuário não encontrado ou sem conta.")
+
+menu_principal()
